@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation Template to create the S3 bucket, dynamodb table and iam user and credentials for the app.
+Parameters:
+  Prefix:
+    Default: prefix
+    Description: The prefix for the buckets
+    MaxLength: '128'
+    MinLength: '1'
+    Type: String
+  AppName:
+    Description: Application Name
+    Default: app
+    Type: String
+  Environment:
+    Description: Defines the environemnt for resources.
+    Type: String
+    AllowedValues:
+      - dev
+      - production
+      - qa
+      - local
+  ReadCapacity:
+    Default: '2'
+    Description: DynamoDB ReadCapacityUnits
+    Type: Number
+  WriteCapacity:
+    Default: '2'
+    Description: DynamoDB WriteCapacityUnits
+    Type: Number
+  IndexReadCapacity:
+    Default: '2'
+    Description: DynamoDB Index ReadCapacityUnits
+    Type: Number
+  IndexWriteCapacity:
+    Default: '2'
+    Description: DynamoDB Index WriteCapacityUnits
+    Type: Number
+Mappings:
+  EnvSlug:
+    local:
+      Slug: local-
+    dev:
+      Slug: dev-
+    qa:
+      Slug: qa-
+    production:
+      Slug: ''
+  EnvShort:
+   local:
+      Slug: local
+    dev:
+      Slug: dev
+    qa:
+      Slug: qa
+    production:
+      Slug: prod
+Outputs:
+  UserName:
+    Description: User Name of the IAM user
+    Value:
+      Ref: AppUser
+  AccessKeyForNewAppUser:
+    Description: AWSAccessKeyId of new user
+    Value:
+      Ref: AppUserAccessKey
+  SecretKeyForNewAppUser:
+    Description: AWSSecretKey of new user
+    Value:
+      Fn::GetAtt:
+      - AppUserAccessKey
+      - SecretAccessKey
+  DyanmoTableName:
+    Value:
+      Ref: ItemDynamoTable
+  S3BucketName:
+    Value:
+      Ref: S3Bucket
+Resources:
+  AppUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub "${Environment}-${AppName}"
+  AppUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        Ref: AppUser
+  AppUserAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      Users:
+        - Ref: AppUser
+      PolicyDocument:
+        Statement:
+        - Action:
+          - s3:*
+          Effect: Allow
+          Resource:  !Sub
+            - "arn:aws:s3:::${SlugLookup}${Prefix}-${AppName}/*"
+            - { SlugLookup: !FindInMap [ EnvSlug, !Ref "Environment", Slug ]}
+        - Action:
+          - s3:*
+          Effect: Allow
+          Resource:  !Sub
+            - "arn:aws:s3:::${SlugLookup}${Prefix}-${AppName}"
+            - { SlugLookup: !FindInMap [ EnvSlug, !Ref "Environment", Slug ]}
+        - Action:
+          - dynamodb:BatchGetItem
+          - dynamodb:BatchWriteItem
+          - dynamodb:CreateTable
+          - dynamodb:DeleteItem
+          - dynamodb:DescribeStream
+          - dynamodb:DescribeTable
+          - dynamodb:GetItem
+          - dynamodb:GetRecords
+          - dynamodb:GetShardIterator
+          - dynamodb:ListStreams
+          - dynamodb:ListTables
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:Scan
+          - dynamodb:UpdateItem
+          - dynamodb:UpdateTable
+          Effect: Allow
+          Resource: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}_${EnvShortLookup}_*"
+            - { EnvShortLookup: !FindInMap [ EnvShort, !Ref "Environment", Slug ], TableName: !Join [ "_",  !Split [ "-" , !Ref "AppName" ] ] }
+        - Action:
+          - elasticache:Describe*
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - ses:SendEmail
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - cloudwatch:PutMetricData
+          Effect: Allow
+          Resource: '*'
+      PolicyName: MainPolicy
+  ItemDynamoTable:
+    Properties:
+      TableName:  !Sub
+        - "${TableName}_${EnvShortLookup}_item"
+        - { EnvShortLookup: !FindInMap [ EnvShort, !Ref "Environment", Slug ], TableName: !Join [ "_",  !Split [ "-" , !Ref "AppName" ] ] }
+      AttributeDefinitions:
+      - AttributeName: category
+        AttributeType: S
+      - AttributeName: pubDate
+        AttributeType: S
+      - AttributeName: id
+        AttributeType: S
+      GlobalSecondaryIndexes:
+      - IndexName: CategoryDateIndex
+        KeySchema:
+        - AttributeName: category
+          KeyType: HASH
+        - AttributeName: pubDate
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: !Ref IndexReadCapacity
+          WriteCapacityUnits: !Ref IndexWriteCapacity
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacity
+        WriteCapacityUnits: !Ref WriteCapacity
+    Type: AWS::DynamoDB::Table
+  S3Bucket:
+    Properties:
+      AccessControl: Private
+      BucketName:  !Sub
+        - "${SlugLookup}${Prefix}-${AppName}"
+        - { SlugLookup: !FindInMap [ EnvSlug, !Ref "Environment", Slug ]}
+    Type: AWS::S3::Bucket
