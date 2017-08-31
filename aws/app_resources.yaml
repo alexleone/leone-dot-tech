@@ -155,7 +155,7 @@ Resources:
         KeySchema:
         - AttributeName: category
           KeyType: HASH
-        - AttributeName: pubDate
+        - AttributeName: updatedAt
           KeyType: RANGE
         Projection:
           ProjectionType: ALL
