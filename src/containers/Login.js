@@ -1,13 +1,13 @@
 import React, { Component } from "react";
-import { FormGroup, FormControl, ControlLabel } from "react-bootstrap";
-import "./Login.css";
-import config from "../config";
 import {
   CognitoUserPool,
   AuthenticationDetails,
   CognitoUser
 } from "amazon-cognito-identity-js";
-import LoaderButton from '../components/LoaderButton';
+import { FormGroup, FormControl, ControlLabel } from "react-bootstrap";
+import LoaderButton from "../components/LoaderButton";
+import config from "../config";
+import "./Login.css";
 
 export default class Login extends Component {
   constructor(props) {
@@ -19,31 +19,6 @@ export default class Login extends Component {
       password: ""
     };
   }
-
-  validateForm() {
-    return this.state.email.length > 0 && this.state.password.length > 0;
-  }
-
-  handleChange = event => {
-    this.setState({
-      [event.target.id]: event.target.value
-    });
-  };
-
-  handleSubmit = async event => {
-    event.preventDefault();
-
-    this.setState({ isLoading: true });
-
-    try {
-      await this.login(this.state.email, this.state.password);
-      this.props.userHasAuthenticated(true);
-      this.props.history.push("/");
-    } catch (e) {
-      alert(e);
-      this.setState({ isLoading: false });
-    }
-  };
 
   login(email, password) {
     const userPool = new CognitoUserPool({
@@ -60,6 +35,30 @@ export default class Login extends Component {
         onFailure: err => reject(err)
       })
     );
+  }
+
+  validateForm() {
+    return this.state.email.length > 0 && this.state.password.length > 0;
+  }
+
+  handleChange = event => {
+    this.setState({
+      [event.target.id]: event.target.value
+    });
+  }
+
+  handleSubmit = async event => {
+    event.preventDefault();
+
+    this.setState({ isLoading: true });
+
+    try {
+      await this.login(this.state.email, this.state.password);
+      this.props.userHasAuthenticated(true);
+    } catch (e) {
+      alert(e);
+      this.setState({ isLoading: false });
+    }
   }
 
   render() {
