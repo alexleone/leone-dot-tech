@@ -1,8 +1,8 @@
 export default {
   cognito: {
-    USER_POOL_ID: "us-east-1_ywYSdSMfj",
-    APP_CLIENT_ID: "7itkfuoe1smkotj3hmk8jtal9i",
-    IDENTITY_POOL_ID: "us-east-1:06186dd0-a681-4079-8701-5bd2eee4204f",
+    USER_POOL_ID: "us-east-1_ql58aKgir",
+    APP_CLIENT_ID: "5d1b1pop2i78qid6c6j83thgto",
+    IDENTITY_POOL_ID: "us-east-1:2be15265-4b74-4772-a146-bc4e32c6464a",
     REGION: "us-east-1"
   },
   apiGateway: {
